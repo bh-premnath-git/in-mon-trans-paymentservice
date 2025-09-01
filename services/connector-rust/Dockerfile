@@ -3,7 +3,7 @@ FROM rust:1.83-slim
 WORKDIR /usr/src/app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash netcat-openbsd ca-certificates && \
+    bash netcat-openbsd ca-certificates protobuf-compiler && \
     rm -rf /var/lib/apt/lists/*
 
 COPY . .
