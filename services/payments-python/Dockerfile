@@ -14,8 +14,14 @@ COPY services/payments-python/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-RUN python -m grpc_tools.protoc -I proto --python_out=services/payments-python/payments/pb --grpc_python_out=services/payments-python/payments/pb proto/payments.proto
 
+# Generate protobuf files with correct paths
 WORKDIR /app/services/payments-python
+RUN python -m grpc_tools.protoc \
+    -I /app/proto \
+    --python_out=payments/pb \
+    --grpc_python_out=payments/pb \
+    /app/proto/payments.proto
+
 EXPOSE ${APP_PORT}
 CMD ["bash","-lc","uvicorn payments.main:app --host 0.0.0.0 --port ${APP_PORT} --reload --no-access-log"]
