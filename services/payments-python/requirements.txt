@@ -2,3 +2,10 @@ fastapi==0.115.0
 uvicorn[standard]==0.30.6
 grpcio
 grpcio-tools
+asyncpg
+redis
+structlog
+opentelemetry-api
+opentelemetry-instrumentation-fastapi
+opentelemetry-instrumentation-grpc
+statemachine
