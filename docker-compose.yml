@@ -1,0 +1,121 @@
+name: payments
+
+networks:
+  payments-net:
+
+volumes:
+  pg_data:
+  redpanda_data:
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: payments-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-payments}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payments}
+      POSTGRES_DB: ${POSTGRES_DB:-payments}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-payments} -d ${POSTGRES_DB:-payments}"]
+      interval: 30s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks: [payments-net]
+
+  redis:
+    image: redis:7-alpine
+    container_name: payments-redis
+    command: ["redis-server","--appendonly","yes"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD","redis-cli","ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 20
+    networks: [payments-net]
+
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: payments-redpanda
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp=1
+      - --memory=512M
+      - --reserve-memory=0M
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
+      - --rpc-addr=0.0.0.0:33145
+      - --advertise-rpc-addr=redpanda:33145
+      - --pandaproxy-addr=0.0.0.0:8082
+      - --advertise-pandaproxy-addr=redpanda:8082
+    ports:
+      - "9092:9092"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    networks: [payments-net]
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    container_name: payments-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP gRPC
+    networks: [payments-net]
+
+  connector-rust:
+    build:
+      context: ./services/connector-rust
+      dockerfile: ${RS_DOCKERFILE:-Dockerfile}
+    container_name: payments-connector
+    environment:
+      GRPC_PORT: ${GRPC_PORT:-50051}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+    depends_on:
+      jaeger:
+        condition: service_started
+    ports:
+      - "50051:50051"
+    healthcheck:
+      # simple TCP port check (works because runtime image has netcat)
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 ${GRPC_PORT:-50051}"]
+      interval: 30s
+      timeout: 3s
+      retries: 30
+    networks: [payments-net]
+
+  payments-python:
+    build:
+      context: ./services/payments-python
+      dockerfile: ${PY_DOCKERFILE:-Dockerfile}
+    container_name: payments-python
+    environment:
+      APP_PORT: ${APP_PORT:-8000}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+      connector-rust:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:${APP_PORT:-8000}/healthz || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 30
+    networks: [payments-net]
