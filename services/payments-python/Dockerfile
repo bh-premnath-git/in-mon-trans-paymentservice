@@ -15,13 +15,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Generate protobuf files with correct paths
+# Generate protobuf files with proper structure
 WORKDIR /app/services/payments-python
-RUN python -m grpc_tools.protoc \
-    -I /app/proto \
-    --python_out=payments/pb \
-    --grpc_python_out=payments/pb \
-    /app/proto/payments.proto
+RUN mkdir -p payments/pb && \
+    touch payments/pb/__init__.py && \
+    cd /app && \
+    python -m grpc_tools.protoc \
+    -I proto \
+    --python_out=services/payments-python/payments/pb \
+    --grpc_python_out=services/payments-python/payments/pb \
+    proto/payments.proto
 
 EXPOSE ${APP_PORT}
 CMD ["bash","-lc","uvicorn payments.main:app --host 0.0.0.0 --port ${APP_PORT} --reload --no-access-log"]
