@@ -22,7 +22,7 @@ import structlog
 from opentelemetry import trace
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.grpc import GrpcInstrumentorClient
-from statemachine import StateMachine, State
+from transitions import State, StateMachine
 
 # Import generated gRPC stubs
 from .pb import payments_pb2 as payment_pb2

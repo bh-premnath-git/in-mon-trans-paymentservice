@@ -75,8 +75,8 @@ services:
 
   connector-rust:
     build:
-      context: .
-      dockerfile: services/connector-rust/${RS_DOCKERFILE:-Dockerfile}
+      context: services/connector-rust
+      dockerfile: ${RS_DOCKERFILE:-Dockerfile}
     container_name: payments-connector
     environment:
       GRPC_PORT: ${GRPC_PORT:-50051}
