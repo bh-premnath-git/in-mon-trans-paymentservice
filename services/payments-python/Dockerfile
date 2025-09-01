@@ -10,19 +10,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl build-essential && \
     rm -rf /var/lib/apt/lists/*
 
-RUN echo "fastapi==0.115.0" > requirements.txt && \
-    echo "uvicorn[standard]==0.30.6" >> requirements.txt
-
+COPY services/payments-python/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Dev: mount your code; but bootstrap a tiny app if none present yet
-RUN mkdir -p payments && \
-    [ -f payments/main.py ] || cat > payments/main.py <<'PY'
-from fastapi import FastAPI
-app = FastAPI()
-@app.get("/healthz")
-def healthz(): return {"status": "ok"}
-PY
+COPY . .
+RUN python -m grpc_tools.protoc -I proto --python_out=services/payments-python/payments/pb --grpc_python_out=services/payments-python/payments/pb proto/payments.proto
 
+WORKDIR /app/services/payments-python
 EXPOSE ${APP_PORT}
 CMD ["bash","-lc","uvicorn payments.main:app --host 0.0.0.0 --port ${APP_PORT} --reload --no-access-log"]

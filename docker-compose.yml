@@ -75,8 +75,8 @@ services:
 
   connector-rust:
     build:
-      context: ./services/connector-rust
-      dockerfile: ${RS_DOCKERFILE:-Dockerfile}
+      context: .
+      dockerfile: services/connector-rust/${RS_DOCKERFILE:-Dockerfile}
     container_name: payments-connector
     environment:
       GRPC_PORT: ${GRPC_PORT:-50051}
@@ -96,8 +96,8 @@ services:
 
   payments-python:
     build:
-      context: ./services/payments-python
-      dockerfile: ${PY_DOCKERFILE:-Dockerfile}
+      context: .
+      dockerfile: services/payments-python/${PY_DOCKERFILE:-Dockerfile}
     container_name: payments-python
     environment:
       APP_PORT: ${APP_PORT:-8000}
