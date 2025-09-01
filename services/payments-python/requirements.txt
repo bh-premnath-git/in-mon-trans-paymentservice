@@ -8,4 +8,4 @@ structlog
 opentelemetry-api
 opentelemetry-instrumentation-fastapi
 opentelemetry-instrumentation-grpc
-transitions==0.9.0
+python-statemachine
